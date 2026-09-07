@@ -1,17 +1,72 @@
 [
   {
-    "titre": "Journee mondiale de l'hygiene des mains - 5 mai",
-    "corps": "Campagne annuelle de l'OMS SAVE LIVES: Clean Your Hands. Rappel des 5 moments et mesure de l'observance dans les services.",
+    "titre": "Journée mondiale de l'hygiène des mains — 5 mai",
+    "corps": "Campagne annuelle de l'OMS « SAVE LIVES: Clean Your Hands ». Occasion de mesurer l'observance des 5 moments dans les services et de relancer la sensibilisation.",
     "source": "OMS"
   },
   {
-    "titre": "Securite des aliments - cuisines et offices hospitaliers",
-    "corps": "Plan de maitrise sanitaire (HACCP) : chaine du froid tracee, cuisson a coeur >= 75 C, marche en avant respectee.",
-    "source": "Codex Alimentarius / ONSSA"
+    "titre": "Journée mondiale de la sécurité des patients — 17 septembre",
+    "corps": "Journée OMS dédiée à la sécurité des soins. L'hygiène et la prévention des infections associées aux soins en sont un pilier majeur.",
+    "source": "OMS"
   },
   {
-    "titre": "Gestion des dechets de soins (DASRI)",
-    "corps": "Tri a la source selon le code couleur, sacs remplis aux 3/4 puis scelles, circuit propre/sale distinct, filiere agreee.",
-    "source": "Ministere de la Sante (Maroc)"
+    "titre": "Semaine mondiale de sensibilisation à la résistance aux antimicrobiens — 18-24 novembre",
+    "corps": "La lutte contre l'antibiorésistance passe par le bon usage des antibiotiques ET par la prévention des infections (hygiène des mains, asepsie, bionettoyage).",
+    "source": "OMS"
+  },
+  {
+    "titre": "Les 5 moments de l'hygiène des mains",
+    "corps": "Avant contact patient · avant geste aseptique · après risque d'exposition aux liquides biologiques · après contact patient · après contact avec l'environnement du patient. Friction SHA 20-30 s ou lavage 40-60 s.",
+    "source": "OMS / HAS"
+  },
+  {
+    "titre": "Précautions standard et complémentaires",
+    "corps": "Précautions standard pour tout patient. Précautions complémentaires selon l'agent : Contact, Gouttelettes, Air (masque FFP2, chambre à pression négative). Signalétique claire à la porte.",
+    "source": "HAS / SF2H"
+  },
+  {
+    "titre": "Infections associées aux soins (IAS)",
+    "corps": "Les IAS (nosocomiales) allongent l'hospitalisation et aggravent le pronostic. Prévention : hygiène des mains, asepsie, bon usage des antibiotiques, surveillance et signalement (lien DELM).",
+    "source": "Ministère de la Santé (Maroc) / DELM"
+  },
+  {
+    "titre": "Stérilisation et circuit du matériel",
+    "corps": "Circuit sale/propre/stérile respecté, traçabilité des cycles d'autoclave, test de Bowie-Dick quotidien, contrôle des dates de péremption du stérile.",
+    "source": "Bonnes pratiques de stérilisation"
+  },
+  {
+    "titre": "Gestion des déchets de soins (DASRI)",
+    "corps": "Tri à la source selon le code couleur, sacs remplis aux 3/4 puis scellés, circuit propre/sale distinct, stockage et collecte tracés, élimination par filière agréée.",
+    "source": "Ministère de la Santé (Maroc)"
+  },
+  {
+    "titre": "Bio-nettoyage et désinfection des surfaces",
+    "corps": "Protocole écrit : balayage humide, détergent-désinfectant adapté, chiffonnettes par code couleur, matériel dédié par zone. Surfaces à contact fréquent désinfectées à la fréquence requise.",
+    "source": "SF2H"
+  },
+  {
+    "titre": "Eau et réseau hydrique — maîtrise du risque",
+    "corps": "Contrôles physico-chimiques et bactériologiques, chlore résiduel 0,2-0,5 mg/L, surveillance des légionelles, purges des bras morts, désinfection des réservoirs.",
+    "source": "Normes Marocaines (NM) / OMS"
+  },
+  {
+    "titre": "Blanchisserie et hygiène du linge",
+    "corps": "Séparation stricte des circuits linge propre / linge sale, températures de lavage adaptées (≥ 60 °C courant, ≥ 90 °C infectieux), traçabilité, prélèvements bactériologiques périodiques.",
+    "source": "Bonnes pratiques hospitalières"
+  },
+  {
+    "titre": "Sécurité des aliments — cuisines et offices hospitaliers",
+    "corps": "Plan de maîtrise sanitaire (HACCP) : chaîne du froid tracée, cuisson à cœur ≥ 75 °C, marche en avant, hygiène du personnel de distribution.",
+    "source": "Codex Alimentarius"
+  },
+  {
+    "titre": "ONSSA — contrôle des établissements alimentaires (Maroc)",
+    "corps": "Agrément et contrôle sanitaire des restaurants, boucheries, commerces alimentaires et abattoirs. Cadre : loi 28-07 relative à la sécurité sanitaire des produits alimentaires.",
+    "source": "ONSSA (Maroc)"
+  },
+  {
+    "titre": "Normes européennes et internationales",
+    "corps": "Règlement (CE) 852/2004 (hygiène des denrées), 178/2002 (traçabilité), principes HACCP du Codex, ISO 22000 (sécurité des denrées) et ISO 9001 (qualité).",
+    "source": "UE / Codex / ISO"
   }
 ]
