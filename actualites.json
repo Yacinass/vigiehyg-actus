@@ -2,12 +2,14 @@
   {
     "titre": "À la une — Sécurité des patients",
     "corps": "Le 17 septembre, Journée mondiale de la sécurité des patients (OMS) : un bon moment pour auditer l'hygiène des mains et la prévention des infections dans vos services.",
-    "source": "OMS"
+    "source": "OMS",
+    "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Hand_washing.jpg"
   },
   {
     "titre": "Journée mondiale de l'hygiène des mains — 5 mai",
     "corps": "Campagne annuelle de l'OMS « SAVE LIVES: Clean Your Hands ». Occasion de mesurer l'observance des 5 moments dans les services et de relancer la sensibilisation.",
-    "source": "OMS"
+    "source": "OMS",
+    "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Hand_disinfection.jpg"
   },
   {
     "titre": "Journée mondiale de la sécurité des patients — 17 septembre",
@@ -22,7 +24,8 @@
   {
     "titre": "Les 5 moments de l'hygiène des mains",
     "corps": "Avant contact patient · avant geste aseptique · après risque d'exposition aux liquides biologiques · après contact patient · après contact avec l'environnement du patient. Friction SHA 20-30 s ou lavage 40-60 s.",
-    "source": "OMS / HAS"
+    "source": "OMS / HAS",
+    "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Hand_washing.jpg"
   },
   {
     "titre": "Précautions standard et complémentaires",
@@ -37,12 +40,14 @@
   {
     "titre": "Stérilisation et circuit du matériel",
     "corps": "Circuit sale/propre/stérile respecté, traçabilité des cycles d'autoclave, test de Bowie-Dick quotidien, contrôle des dates de péremption du stérile.",
-    "source": "Bonnes pratiques de stérilisation"
+    "source": "Bonnes pratiques de stérilisation",
+    "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Autoclave.jpg"
   },
   {
     "titre": "Gestion des déchets de soins (DASRI)",
     "corps": "Tri à la source selon le code couleur, sacs remplis aux 3/4 puis scellés, circuit propre/sale distinct, stockage et collecte tracés, élimination par filière agréée.",
-    "source": "Ministère de la Santé (Maroc)"
+    "source": "Ministère de la Santé (Maroc)",
+    "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Medical_waste.jpg"
   },
   {
     "titre": "Bio-nettoyage et désinfection des surfaces",
@@ -52,7 +57,8 @@
   {
     "titre": "Eau et réseau hydrique — maîtrise du risque",
     "corps": "Contrôles physico-chimiques et bactériologiques, chlore résiduel 0,2-0,5 mg/L, surveillance des légionelles, purges des bras morts, désinfection des réservoirs.",
-    "source": "Normes Marocaines (NM) / OMS"
+    "source": "Normes Marocaines (NM) / OMS",
+    "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Drinking_water.jpg"
   },
   {
     "titre": "Blanchisserie et hygiène du linge",
