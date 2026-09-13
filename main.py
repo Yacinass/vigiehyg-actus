@@ -3,15 +3,22 @@ VigieHyg - micro-service (hygiene hospitaliere & securite sanitaire), a heberger
 
 Endpoints consommes par l'app Android VigieHyg :
   - GET  /actualites  -> liste d'actualites editable dans actualites.json
-  - POST /interpret   -> interpretation reglementaire + recommandations generees par IA (Claude)
+  - POST /interpret   -> interpretation reglementaire + recommandations generees par IA
 
-L'endpoint /interpret necessite la variable d'environnement ANTHROPIC_API_KEY (a definir
-dans les reglages Render du service). Sans cle, il renvoie 503 et l'app bascule automatiquement
-sur son moteur deterministe hors-ligne.
+L'IA fonctionne EXACTEMENT comme le backend VectoMaroc : le serveur garde la cle et essaie
+plusieurs fournisseurs, dans l'ordre OpenAI -> Anthropic -> Gemini (palier GRATUIT). L'app
+n'a aucune cle a saisir. Definir AU MOINS UNE de ces variables d'environnement sur Render :
+  - OPENAI_API_KEY       (prioritaire ; modele texte, defaut gpt-4.1-mini)
+  - ANTHROPIC_API_KEY    (defaut claude-haiku-4-5-20251001)
+  - GEMINI_API_KEY  ou  GOOGLE_API_KEY   (GRATUIT ; modeles Flash)
+Sans aucune cle, /interpret renvoie ok=false et l'app bascule sur son moteur deterministe hors-ligne.
+Aucune dependance externe pour les appels : urllib (bibliotheque standard).
 """
 import json
 import os
-import httpx
+import urllib.error
+import urllib.request
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -28,24 +35,32 @@ app.add_middleware(
 
 DATA = os.path.join(os.path.dirname(__file__), "actualites.json")
 
-ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-# Modele economique et rapide, adapte a la redaction reglementaire courte.
-ANTHROPIC_MODEL = os.environ.get("VIGIEHYG_MODEL", "claude-haiku-4-5-20251001")
+_OPENAI_ENDPOINT = "https://api.openai.com/v1/responses"
+_ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages"
+_ANTHROPIC_VERSION = "2023-06-01"
+_GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+_DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
+_DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
+_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
 
 
 @app.get("/")
 def root():
-    return {"service": "vigiehyg-api", "endpoints": ["/actualites", "/interpret"]}
+    return {"service": "vigiehyg-api", "endpoints": ["/actualites", "/interpret"], "ia": ia_enabled()}
 
 
 @app.get("/actualites")
 def actualites():
-    """Renvoie la liste d'actualites (editable dans actualites.json)."""
     try:
         with open(DATA, encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return []
+
+
+@app.get("/health")
+def health():
+    return {"ok": True, "ia": ia_enabled(), "providers": _providers_available()}
 
 
 # ---- /interpret ----------------------------------------------------------
@@ -78,8 +93,15 @@ DOMAIN_FRAMEWORK = {
             "reglement general d'hygiene de l'habitat"),
 }
 
+_SYSTEME = (
+    "Tu es un expert marocain en hygiene hospitaliere, securite sanitaire des aliments (ONSSA) "
+    "et sante environnementale. Tu rediges des interpretations reglementaires rigoureuses, "
+    "sourcees sur les textes marocains, et des recommandations actionnables et priorisees. "
+    "Tu reponds toujours UNIQUEMENT par un objet JSON valide, sans texte autour ni Markdown."
+)
 
-def _build_prompt(req: InterpretRequest) -> str:
+
+def _prompt(req: InterpretRequest) -> str:
     dom = DOMAIN_FRAMEWORK.get(req.domaine or "HOSPITAL", DOMAIN_FRAMEWORK["HOSPITAL"])
     lignes = "\n".join(f"  - {s.titre} : {round(s.score)}%" for s in req.sections) or "  (non detaille)"
     return (
@@ -96,57 +118,139 @@ def _build_prompt(req: InterpretRequest) -> str:
         "(sois specifique, pas generique) ; mentionne l'autorite competente a informer si pertinent.\n"
         "2) recommandations : 4 a 7 actions correctives concretes, priorisees (URGENT / a court terme), "
         "ciblant en priorite les sections les plus faibles, avec un delai indicatif.\n\n"
-        "Reponds STRICTEMENT par un objet JSON valide, sans texte autour : "
+        "Reponds STRICTEMENT par un objet JSON valide : "
         '{"interpretation": "...", "recommandations": "..."}. '
         "Les sauts de ligne dans les valeurs doivent etre encodes \\n."
     )
 
 
+def _gemini_key() -> str:
+    return os.getenv("GEMINI_API_KEY", "").strip() or os.getenv("GOOGLE_API_KEY", "").strip()
+
+
+def _providers_available() -> list:
+    out = []
+    if os.getenv("OPENAI_API_KEY", "").strip():
+        out.append("openai")
+    if os.getenv("ANTHROPIC_API_KEY", "").strip():
+        out.append("anthropic")
+    if _gemini_key():
+        out.append("gemini")
+    return out
+
+
+def ia_enabled() -> bool:
+    return bool(_providers_available())
+
+
 @app.post("/interpret")
 def interpret(req: InterpretRequest):
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if not api_key:
-        return _fail("ANTHROPIC_API_KEY non configuree sur le serveur")
+    providers = []
+    if os.getenv("OPENAI_API_KEY", "").strip():
+        providers.append(_call_openai)
+    if os.getenv("ANTHROPIC_API_KEY", "").strip():
+        providers.append(_call_anthropic)
+    if _gemini_key():
+        providers.append(_call_gemini)
+    if not providers:
+        return _fail("Aucune cle IA configuree (OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY)")
 
-    payload = {
-        "model": ANTHROPIC_MODEL,
-        "max_tokens": 900,
-        "system": (
-            "Tu es un expert marocain en hygiene hospitaliere, securite sanitaire des aliments (ONSSA) "
-            "et sante environnementale. Tu rediges des interpretations reglementaires rigoureuses, "
-            "sourcees sur les textes marocains, et des recommandations actionnables. "
-            "Tu reponds toujours par un JSON valide."
-        ),
-        "messages": [{"role": "user", "content": _build_prompt(req)}],
+    prompt = _prompt(req)
+    last = ""
+    for provider in providers:
+        try:
+            text, who = provider(prompt)
+            parsed = _extract_json(text)
+            if parsed and (parsed.get("interpretation") or parsed.get("recommandations")):
+                return {
+                    "ok": True,
+                    "interpretation": (parsed.get("interpretation") or "").strip(),
+                    "recommandations": (parsed.get("recommandations") or "").strip(),
+                    "provider": who,
+                }
+            last = f"{who}: reponse non exploitable"
+        except Exception as e:  # noqa: BLE001
+            last = f"{type(e).__name__}: {str(e)[:200]}"
+            continue
+    return _fail(last or "echec IA")
+
+
+def _post(url: str, body: dict, headers: dict, timeout: int = 60) -> dict:
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode("utf-8"),
+        headers={**headers, "content-type": "application/json"}, method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _call_openai(prompt: str):
+    key = os.getenv("OPENAI_API_KEY", "").strip()
+    mdl = os.getenv("VIGIEHYG_MODEL", _DEFAULT_OPENAI_MODEL).strip()
+    body = {
+        "model": mdl,
+        "instructions": _SYSTEME,
+        "input": [{"role": "user", "content": [{"type": "input_text", "text": prompt}]}],
+        "max_output_tokens": 1000,
     }
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
+    payload = _post(_OPENAI_ENDPOINT, body, {"authorization": f"Bearer {key}"})
+    text = payload.get("output_text") or "".join(
+        c.get("text", "")
+        for item in payload.get("output", []) or []
+        for c in item.get("content", []) or []
+        if c.get("type") in ("output_text", "text")
+    )
+    return text, "openai"
+
+
+def _call_anthropic(prompt: str):
+    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    mdl = os.getenv("VIGIEHYG_MODEL", _DEFAULT_ANTHROPIC_MODEL).strip()
+    # Si VIGIEHYG_MODEL vise OpenAI (gpt-*), ne pas l'imposer a Anthropic.
+    if mdl.startswith("gpt"):
+        mdl = _DEFAULT_ANTHROPIC_MODEL
+    body = {
+        "model": mdl,
+        "max_tokens": 1000,
+        "system": _SYSTEME,
+        "messages": [{"role": "user", "content": prompt}],
     }
-    try:
-        with httpx.Client(timeout=45.0) as client:
-            r = client.post(ANTHROPIC_URL, headers=headers, json=payload)
-        if r.status_code != 200:
-            return _fail(f"Erreur API ({r.status_code})")
-        data = r.json()
+    payload = _post(_ANTHROPIC_ENDPOINT, body,
+                    {"x-api-key": key, "anthropic-version": _ANTHROPIC_VERSION})
+    text = "".join(b.get("text", "") for b in payload.get("content", []) if b.get("type") == "text")
+    return text, "anthropic"
+
+
+def _call_gemini(prompt: str):
+    key = _gemini_key()
+    last_err = None
+    for mdl in _GEMINI_MODELS:
+        gen = {"maxOutputTokens": 1200, "temperature": 0.3, "responseMimeType": "application/json"}
+        if any(t in mdl for t in ("2.5", "flash-latest", "3-", "3.")):
+            gen["thinkingConfig"] = {"thinkingBudget": 0}
+        body = {
+            "system_instruction": {"parts": [{"text": _SYSTEME}]},
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": gen,
+        }
+        try:
+            payload = _post(_GEMINI_ENDPOINT.format(model=mdl), body, {"x-goog-api-key": key})
+        except urllib.error.HTTPError as exc:
+            last_err = exc
+            if exc.code in (404, 429, 500, 503):
+                continue
+            raise
         text = "".join(
-            block.get("text", "")
-            for block in data.get("content", [])
-            if block.get("type") == "text"
-        ).strip()
-        parsed = _extract_json(text)
-        if parsed and (parsed.get("interpretation") or parsed.get("recommandations")):
-            return {
-                "ok": True,
-                "interpretation": (parsed.get("interpretation") or "").strip(),
-                "recommandations": (parsed.get("recommandations") or "").strip(),
-                "modele": ANTHROPIC_MODEL,
-            }
-        # Repli : renvoie le texte brut comme interpretation si le JSON n'a pu etre extrait.
-        return {"ok": True, "interpretation": text, "recommandations": "", "modele": ANTHROPIC_MODEL}
-    except Exception as e:
-        return _fail(f"Exception: {type(e).__name__}")
+            p.get("text", "")
+            for cand in payload.get("candidates", []) or []
+            for p in (cand.get("content", {}) or {}).get("parts", []) or []
+            if "text" in p
+        )
+        if text.strip():
+            return text, f"gemini:{mdl}"
+    if last_err:
+        raise last_err
+    raise RuntimeError("gemini: aucun modele disponible")
 
 
 def _fail(msg: str):
@@ -154,7 +258,8 @@ def _fail(msg: str):
 
 
 def _extract_json(text: str):
-    """Extrait le premier objet JSON du texte (le modele encadre parfois de texte)."""
+    if not text:
+        return None
     start = text.find("{")
     end = text.rfind("}")
     if start >= 0 and end > start:
