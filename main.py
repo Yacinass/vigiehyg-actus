@@ -164,8 +164,8 @@ def interpret(req: InterpretRequest):
             if parsed and (parsed.get("interpretation") or parsed.get("recommandations")):
                 return {
                     "ok": True,
-                    "interpretation": (parsed.get("interpretation") or "").strip(),
-                    "recommandations": (parsed.get("recommandations") or "").strip(),
+                    "interpretation": _as_text(parsed.get("interpretation")),
+                    "recommandations": _as_text(parsed.get("recommandations")),
                     "provider": who,
                 }
             last = f"{who}: reponse non exploitable"
@@ -251,6 +251,27 @@ def _call_gemini(prompt: str):
     if last_err:
         raise last_err
     raise RuntimeError("gemini: aucun modele disponible")
+
+
+def _as_text(v) -> str:
+    """Le modele peut renvoyer une chaine OU une liste (de phrases/points) : on normalise en texte."""
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    if isinstance(v, list):
+        parts = []
+        for item in v:
+            if isinstance(item, dict):
+                # ex. {"action": "...", "priorite": "...", "delai": "..."}
+                vals = [str(x).strip() for x in item.values() if str(x).strip()]
+                parts.append(" — ".join(vals) if vals else "")
+            else:
+                parts.append(str(item).strip())
+        return "\n".join(f"- {p}" for p in parts if p)
+    if isinstance(v, dict):
+        return "\n".join(f"- {k} : {str(val).strip()}" for k, val in v.items() if str(val).strip())
+    return str(v).strip()
 
 
 def _fail(msg: str):
